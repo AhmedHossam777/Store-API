@@ -2,7 +2,10 @@ const e = require('express');
 const Product = require('../models/product');
 
 const getAllProductsStatic = async (req, res) => {
-  const products = await Product.find({}).sort('-name price').limit(10).skip(5);
+  const products = await Product.find({ price: { $gte: 30 } })
+    .sort('-name price')
+    .limit(10)
+    .skip(5);
 
   res.status(200).json({
     message: 'success',
@@ -12,7 +15,7 @@ const getAllProductsStatic = async (req, res) => {
 };
 
 const getAllProducts = async (req, res) => {
-  const { featured, company, name, sort, fields } = req.query;
+  const { featured, company, name, sort, fields, numericFilters } = req.query;
 
   const queryObject = {};
 
@@ -39,6 +42,29 @@ const getAllProducts = async (req, res) => {
     const fieldsList = fields.split(',').join(' ');
     console.log(fieldsList);
     result = result.select(fieldsList);
+  }
+
+  if (numericFilters) {
+    const operatorMap = {
+      '>': '$gt',
+      '>=': '$gte',
+      '=': '$eq',
+      '<': '$lt',
+      '<=': '$lte',
+    };
+    const regEx = /\b(<|>|>=|=|<|<=)\b/g;
+    let filters = numericFilters.replace(
+      regEx,
+      (match) => `-${operatorMap[match]}-`
+    );
+    console.log(filters);
+    const options = ['price', 'rating'];
+    filters = filters.split(',').forEach((item) => {
+      const [field, operator, value] = item.split('-');
+      if (options.includes(field)) {
+        result = result.where({ [field]: { [operator]: Number(value) } });
+      }
+    });
   }
 
   const page = Number(req.query.page) || 1;

@@ -1,4 +1,3 @@
-const e = require('express');
 const Product = require('../models/product');
 
 const getAllProductsStatic = async (req, res) => {
